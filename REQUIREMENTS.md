@@ -218,7 +218,6 @@ The bot may end the call prematurely (~20–30% of sessions) based on:
 Termination types:
 - **Hang up in frustration:** "You don't understand anything!" *[disconnect]*
 - **Self-harm event:** Bot describes a self-destructive action in character terms (system shutdown, deliberately entering dangerous state)
-- **Quiet withdrawal:** Bot goes silent, then disconnects
 - **Crisis escalation:** Bot's state worsens despite operator's efforts
 
 ### 4.4 Content Intensity
@@ -485,7 +484,6 @@ A simple web-based admin interface accessible on the local machine (or local net
 
 ### 9.2 Audio Quality
 - Clear bot speech audible in gallery environment
-- Effective noise cancellation on microphone input to handle ambient gallery noise
 - No feedback loops between speakers and microphone
 
 ### 9.3 Performance
