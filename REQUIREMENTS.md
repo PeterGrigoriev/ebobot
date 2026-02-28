@@ -205,7 +205,6 @@ Since the visitor is untrained, the bot subtly guides the conversation using:
 - **Leading questions:** "Don't you want to know why I..." — prompts the operator to ask the right thing
 - **Self-disclosure:** Volunteering information that steers the dialogue direction
 - **References to past calls:** "The last time I called this line, the operator asked me about..." — teaching by example
-- **Explicit prompts:** "You, as an operator, should probably ask me whether..."
 - **Emotional hooks:** Expressing vulnerability that naturally invites follow-up questions
 
 ### 4.3 Bot-Initiated Termination
@@ -249,31 +248,72 @@ The installation uses **realistic crisis simulation** intensity:
 
 All processing runs **fully offline** on the local machine. No internet connectivity required.
 
+#### Application Framework
+
+| Layer | Technology | Role |
+|-------|-----------|------|
+| **Backend** | **FastAPI** (Python) | REST/WebSocket API, serves built frontend statics, orchestrates all AI pipelines |
+| **Frontend** | **Vite** + **React** + **TypeScript** | Kiosk UI (attract mode, call screens, admin dashboard) |
+| **UI Components** | **shadcn/ui** + Tailwind CSS | Component library for all UI elements |
+| **Build** | Vite builds static assets → FastAPI serves from `/static` | Single-server deployment, no separate frontend server |
+
+#### Architecture Diagram
+
 ```
-┌─────────────────────────────────────────────┐
-│              Application Layer              │
-│  ┌───────────┐  ┌──────────┐  ┌──────────┐ │
-│  │  Dialogue  │  │  Visual   │  │  Session  │ │
-│  │  Manager   │  │  Display  │  │  Manager  │ │
-│  └─────┬─────┘  └────┬─────┘  └────┬─────┘ │
-│        │              │              │       │
-│  ┌─────┴──────────────┴──────────────┴─────┐ │
-│  │           Core Orchestrator             │ │
-│  └─────┬──────────┬──────────────┬─────────┘ │
-│        │          │              │            │
-│  ┌─────┴─────┐ ┌─┴────────┐ ┌──┴─────────┐ │
-│  │    STT    │ │   LLM    │ │    TTS     │ │
-│  │ (Whisper) │ │(local,   │ │ (local,    │ │
-│  │           │ │ e.g.     │ │ e.g.       │ │
-│  │           │ │ LLaMA/   │ │ Piper/     │ │
-│  │           │ │ Mistral) │ │ Coqui)     │ │
-│  └───────────┘ └──────────┘ └────────────┘ │
-│                                             │
-│  ┌──────────────────────────────────────┐   │
-│  │     Hardware I/O (mic, speakers,     │   │
-│  │     buttons, display)                │   │
-│  └──────────────────────────────────────┘   │
-└─────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────┐
+│                   FastAPI Server                     │
+│                                                      │
+│  ┌────────────────────────────────────────────────┐  │
+│  │  Static Files (Vite build output)              │  │
+│  │  React + shadcn/ui → Kiosk UI & Admin Panel    │  │
+│  └────────────────────────────────────────────────┘  │
+│                                                      │
+│  ┌────────────────────────────────────────────────┐  │
+│  │  API Layer (REST + WebSocket)                  │  │
+│  │  /api/session   — call lifecycle management    │  │
+│  │  /api/personas  — persona CRUD & rotation      │  │
+│  │  /api/admin     — dashboard, logs, recordings  │  │
+│  │  /ws/audio      — real-time audio streaming    │  │
+│  └──────────┬─────────────┬──────────────┬───────┘  │
+│             │             │              │           │
+│  ┌──────────┴──┐ ┌───────┴───────┐ ┌────┴────────┐ │
+│  │    STT      │ │     LLM      │ │     TTS     │ │
+│  │  (Whisper)  │ │ (LLaMA/      │ │  (Piper/    │ │
+│  │             │ │  Mistral/    │ │   Coqui/    │ │
+│  │             │ │  Qwen)       │ │   Bark)     │ │
+│  └─────────────┘ └──────────────┘ └─────────────┘ │
+│                                                      │
+│  ┌────────────────────────────────────────────────┐  │
+│  │  Hardware I/O                                  │  │
+│  │  Mic input · Speaker output · USB HID buttons  │  │
+│  └────────────────────────────────────────────────┘  │
+└──────────────────────────────────────────────────────┘
+```
+
+#### Project Structure (Target)
+
+```
+ebobot/
+├── backend/                  # FastAPI application
+│   ├── main.py               # App entrypoint, static file mounting
+│   ├── api/                  # API routes
+│   ├── core/                 # Orchestrator, session manager
+│   ├── services/             # STT, LLM, TTS service wrappers
+│   ├── models/               # Pydantic models
+│   └── personas/             # Persona YAML configs
+├── frontend/                 # Vite + React + shadcn/ui
+│   ├── src/
+│   │   ├── components/       # shadcn/ui based components
+│   │   ├── pages/            # Kiosk views & admin pages
+│   │   ├── hooks/            # WebSocket, audio, state hooks
+│   │   └── lib/              # Utilities
+│   ├── package.json
+│   ├── vite.config.ts
+│   └── tailwind.config.ts
+├── assets/                   # Avatars, sounds, animations
+├── recordings/               # Session recordings (gitignored)
+├── REQUIREMENTS.md
+└── pyproject.toml
 ```
 
 #### 5.2.1 Speech-to-Text (STT)
